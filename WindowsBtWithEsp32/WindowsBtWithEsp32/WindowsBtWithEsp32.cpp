@@ -14,6 +14,8 @@ Bluetooth programming with Windows sockets - https://docs.microsoft.com/en-us/wi
 #include <Winsock2.h>
 #include <Ws2bth.h>
 #include <BluetoothAPIs.h>
+#include <iostream>
+#include <string>
 
 BTH_ADDR esp32BtAddress;
 SOCKADDR_BTH btSocketAddress;
@@ -111,7 +113,7 @@ bool connectToEsp32()
 
 bool sendMessageToEsp32()
 {
-    const char* message = "Message from Windows\r\n";
+    const char* message = "\n";
     int sendResult = send(btClientSocket, message, (int)strlen(message), 0); //send your message to the BT device
     if (sendResult == SOCKET_ERROR)
     {
@@ -128,20 +130,29 @@ bool recieveMessageFromEsp32()
     printf("Waiting to recieve a message\r\n");
     while (true)
     {
-        char recievedMessage[512]; //make sure buffer is big enough for any messages your receiving
-        int recievedMessageLength = 512;
-        int recieveResult = recv(btClientSocket, recievedMessage, recievedMessageLength, 0); //if your socket is blocking, this will block until a
-        if (recieveResult < 0)                                                               //a message is recieved. If not, it will return right 
-        {                                                                                    //away
-            continue;
-        }
-        printf("Message recieved - \r\n");
-        for (int i = 0; i < recieveResult; i++)
-        {
-            printf("%c", recievedMessage[i]);
-        }
-        printf("\r\n");
-        sendMessageToEsp32();
+        char buffer[50000];
+        int nrRecievedBytes = recv(btClientSocket, buffer, sizeof(buffer), 0); //if your socket is blocking, this will block until a
+        if (nrRecievedBytes < 0) { continue; }                                            //a message is recieved. If not, it will return right away
+        std::string message(buffer, nrRecievedBytes);
+        std::cout << "Message recieved: " << message << std::endl;
+
+        sendMessageToEsp32(); // send message to unblock the ESP32 from waiting on a message from the PC.
+    }
+}
+
+bool countReceivedValidMessage()
+{
+    printf("Waiting to recieve a message\r\n");
+
+    while (true)
+    {
+        char buffer[50000];        
+        int nrRecievedBytes = recv(btClientSocket, buffer, sizeof(buffer), 0); //if your socket is blocking, this will block until a
+        if (nrRecievedBytes < 0) {continue;}                                            //a message is recieved. If not, it will return right away
+        std::string message(buffer, nrRecievedBytes);                                                                               
+        std::cout << "Message recieved: " << message << std::endl;
+        
+        sendMessageToEsp32(); // send message to unblock the ESP32 from waiting on a message from the PC.
     }
 }
 
