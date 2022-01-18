@@ -4,10 +4,11 @@ This repository is a sample on how to connect from a Windows 10 PC to an ESP32 v
 
 # Steps to build:
 - Download the zip with the code (or clone it with git).
-- Download Visual Studio Community (tested with 2019). https://visualstudio.microsoft.com/downloads/
-- During that installation, you only need the .NET desktop development kit.
-- Download the Arduino IDE. https://www.arduino.cc/en/software
+- Download [Visual Studio Community] (https://visualstudio.microsoft.com/downloads/) (tested with 2019). 
+- During that installation, you only need the Desktop development with C++.
+- Download the [Arduino IDE](https://www.arduino.cc/en/software).
 - Open the Arduino.ino file, and click Upload with your ESP32 plugged in. (Make sure you installed [ESP32 libraries first](https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/).
+- Open the Bluetooth menu on your PC (you should have a dongle or Bluetooth integrated). Connect to Esp32Test.
 
 - Open the .sln file in WindowsBTWithEsp32 with Visual Studio Community. 
 - Click play (Local Windows Debugger).
