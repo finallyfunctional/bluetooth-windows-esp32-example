@@ -111,10 +111,9 @@ bool connectToEsp32()
     return true;
 }
 
-bool sendMessageToEsp32()
+bool sendMessageToEsp32(std::string message)
 {
-    const char* message = "\n";
-    int sendResult = send(btClientSocket, message, (int)strlen(message), 0); //send your message to the BT device
+    int sendResult = send(btClientSocket, message.c_str(), sizeof(message.c_str()), 0); //send your message to the BT device
     if (sendResult == SOCKET_ERROR)
     {
         wprintf(L"Sending to ESP32 failed. Error code %d\r\n", WSAGetLastError());
@@ -125,19 +124,23 @@ bool sendMessageToEsp32()
     return true;
 }
 
-bool recieveMessageFromEsp32()
+std::string recieveMessageFromEsp32(std::string send_reply = "none" )
 {
-    printf("Waiting to recieve a message\r\n");
-    while (true)
-    {
-        char buffer[50000];
-        int nrRecievedBytes = recv(btClientSocket, buffer, sizeof(buffer), 0); //if your socket is blocking, this will block until a
-        if (nrRecievedBytes < 0) { continue; }                                            //a message is recieved. If not, it will return right away
-        std::string message(buffer, nrRecievedBytes);
-        std::cout << "Message recieved: " << message << std::endl;
 
-        sendMessageToEsp32(); // send message to unblock the ESP32 from waiting on a message from the PC.
-    }
+        char* buffer = new char[50000];
+        int nrRecievedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a
+        if (nrRecievedBytes < 0) {
+            delete(buffer); //make sure to clean up things on the heap made with "new" 
+            return ""; 
+        }              
+                          
+        std::string message(buffer, nrRecievedBytes);
+        std::cout << "Message recieved: " <<message << std::endl;
+
+        sendMessageToEsp32(send_reply); // send message to unblock the ESP32 from waiting on a message from the PC.
+
+        delete(buffer); //make sure to clean up things on the heap made with "new"
+        return message;
 }
 
 bool countReceivedValidMessage()
@@ -146,13 +149,14 @@ bool countReceivedValidMessage()
 
     while (true)
     {
-        char buffer[50000];        
-        int nrRecievedBytes = recv(btClientSocket, buffer, sizeof(buffer), 0); //if your socket is blocking, this will block until a
+        char* buffer = new char[50000];
+        int nrRecievedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a
         if (nrRecievedBytes < 0) {continue;}                                            //a message is recieved. If not, it will return right away
         std::string message(buffer, nrRecievedBytes);                                                                               
         std::cout << "Message recieved: " << message << std::endl;
         
-        sendMessageToEsp32(); // send message to unblock the ESP32 from waiting on a message from the PC.
+        sendMessageToEsp32("\n"); // send message to unblock the ESP32 from waiting on a message from the PC.
+        delete(buffer); //make sure to clean up things on the heap made with "new"
     }
 }
 
@@ -171,10 +175,15 @@ int main()
     {
         return 0;
     }
-    if (!sendMessageToEsp32()) //send a message to the ESP32
+    if (!sendMessageToEsp32("\n")) //send a message to the ESP32
     {
         return 0;
     }
-    recieveMessageFromEsp32(); //receive messages from ESP32
+    std::cout <<"Waiting to recieve a message\r\n";
+    while (true)
+    {
+        recieveMessageFromEsp32(); //receive messages from ESP32
+    }
+
     return 0;
 }
