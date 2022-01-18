@@ -16,6 +16,7 @@ Bluetooth programming with Windows sockets - https://docs.microsoft.com/en-us/wi
 #include <BluetoothAPIs.h>
 #include <iostream>
 #include <string>
+#include <vector>
 
 BTH_ADDR esp32BtAddress;
 SOCKADDR_BTH btSocketAddress;
@@ -111,9 +112,9 @@ bool connectToEsp32()
     return true;
 }
 
-bool sendMessageToEsp32(std::string message)
+bool sendMessageToEsp32(const char* message)
 {
-    int sendResult = send(btClientSocket, message.c_str(), sizeof(message.c_str()), 0); //send your message to the BT device
+    int sendResult = send(btClientSocket, message, (int)strlen(message), 0); //send your message to the BT device
     if (sendResult == SOCKET_ERROR)
     {
         wprintf(L"Sending to ESP32 failed. Error code %d\r\n", WSAGetLastError());
@@ -124,41 +125,56 @@ bool sendMessageToEsp32(std::string message)
     return true;
 }
 
-std::string recieveMessageFromEsp32(std::string send_reply = "none" )
+bool sendMessageToEsp32(std::string message)
 {
+    const char* msg = message.c_str();
+    std::cout << strlen(msg);
+    return sendMessageToEsp32(msg);
+   
+}
 
+
+
+
+bool sendMessageToEsp32()
+{
+    const char* message = "\n";
+    int sendResult = send(btClientSocket, message, (int)strlen(message), 0); //send your message to the BT device
+    if (sendResult == SOCKET_ERROR)
+    {
+        wprintf(L"Sending to ESP32 failed. Error code %d\r\n", WSAGetLastError());
+        closesocket(btClientSocket);
+        WSACleanup();
+        return false;
+    }
+    return true;
+}
+
+//receive a message and send a message back.
+//to not send a message back use send_reply="-". (This will block the esp32 if it expects a message if you don't send anywhere else!)
+//always terminate the reply with \n. \n will send the minimum info to not block the esp32.
+std::string recieveStringMessageFromEsp32(std::string send_reply = "\n")
+{
         char* buffer = new char[50000];
-        int nrRecievedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a
-        if (nrRecievedBytes < 0) {
-            delete(buffer); //make sure to clean up things on the heap made with "new" 
+        int nrReceivedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a message comes in
+        if (nrReceivedBytes < 0) {
+            delete[] buffer; //make sure to clean up things on the heap made with "new" 
             return ""; 
         }              
                           
-        std::string message(buffer, nrRecievedBytes);
+        std::string message(buffer, nrReceivedBytes);
         std::cout << "Message recieved: " <<message << std::endl;
 
-        sendMessageToEsp32(send_reply); // send message to unblock the ESP32 from waiting on a message from the PC.
-
-        delete(buffer); //make sure to clean up things on the heap made with "new"
+        if (send_reply != "-")
+        {
+            sendMessageToEsp32(send_reply); // send message to unblock the ESP32 from waiting on a message from the PC.
+        }
+        delete[] buffer; //make sure to clean up things on the heap made with "new"
         return message;
 }
 
-bool countReceivedValidMessage()
-{
-    printf("Waiting to recieve a message\r\n");
 
-    while (true)
-    {
-        char* buffer = new char[50000];
-        int nrRecievedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a
-        if (nrRecievedBytes < 0) {continue;}                                            //a message is recieved. If not, it will return right away
-        std::string message(buffer, nrRecievedBytes);                                                                               
-        std::cout << "Message recieved: " << message << std::endl;
-        
-        sendMessageToEsp32("\n"); // send message to unblock the ESP32 from waiting on a message from the PC.
-        delete(buffer); //make sure to clean up things on the heap made with "new"
-    }
-}
+
 
 int main()
 {
@@ -182,7 +198,7 @@ int main()
     std::cout <<"Waiting to recieve a message\r\n";
     while (true)
     {
-        recieveMessageFromEsp32(); //receive messages from ESP32
+        recieveStringMessageFromEsp32(); //receive messages from ESP32
     }
 
     return 0;
