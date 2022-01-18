@@ -6,6 +6,8 @@ Microsoft example - https://github.com/microsoftarchive/msdn-code-gallery-micros
 Bluetooth programming with Windows sockets - https://docs.microsoft.com/en-us/windows/win32/bluetooth/bluetooth-programming-with-windows-sockets
 **/
 
+#pragma comment(lib, "Bthprops.lib")
+#pragma comment(lib, "Ws2_32.lib")
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -139,6 +141,7 @@ bool recieveMessageFromEsp32()
             printf("%c", recievedMessage[i]);
         }
         printf("\r\n");
+        sendMessageToEsp32();
     }
 }
 
