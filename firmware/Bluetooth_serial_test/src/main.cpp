@@ -21,5 +21,5 @@ void loop() {
     Serial.println(message);
     SerialBT.println("<970,400,500-500,500,100-1,0>");
   }
-  delay(10);
+  // delay is only required if you do non-blocking or one way messages only.
 }

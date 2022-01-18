@@ -17,6 +17,7 @@ Bluetooth programming with Windows sockets - https://docs.microsoft.com/en-us/wi
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 BTH_ADDR esp32BtAddress;
 SOCKADDR_BTH btSocketAddress;
@@ -128,32 +129,15 @@ bool sendMessageToEsp32(const char* message)
 bool sendMessageToEsp32(std::string message)
 {
     const char* msg = message.c_str();
-    std::cout << strlen(msg);
     return sendMessageToEsp32(msg);
    
 }
 
 
-
-
-bool sendMessageToEsp32()
-{
-    const char* message = "\n";
-    int sendResult = send(btClientSocket, message, (int)strlen(message), 0); //send your message to the BT device
-    if (sendResult == SOCKET_ERROR)
-    {
-        wprintf(L"Sending to ESP32 failed. Error code %d\r\n", WSAGetLastError());
-        closesocket(btClientSocket);
-        WSACleanup();
-        return false;
-    }
-    return true;
-}
-
 //receive a message and send a message back.
 //to not send a message back use send_reply="-". (This will block the esp32 if it expects a message if you don't send anywhere else!)
 //always terminate the reply with \n. \n will send the minimum info to not block the esp32.
-std::string recieveStringMessageFromEsp32(std::string send_reply = "\n")
+std::string recieveStringMessageFromEsp32(std::string send_reply = "\n", bool debug = true)
 {
         char* buffer = new char[50000];
         int nrReceivedBytes = recv(btClientSocket, buffer, 50000, 0); //if your socket is blocking, this will block until a message comes in
@@ -163,7 +147,9 @@ std::string recieveStringMessageFromEsp32(std::string send_reply = "\n")
         }              
                           
         std::string message(buffer, nrReceivedBytes);
-        std::cout << "Message recieved: " <<message << std::endl;
+
+        if(debug)
+            std::cout << "Message recieved: " <<message << std::endl;
 
         if (send_reply != "-")
         {
@@ -173,6 +159,60 @@ std::string recieveStringMessageFromEsp32(std::string send_reply = "\n")
         return message;
 }
 
+//returns <nrOfMessages, nrOfSeconds> measured.
+//you can give up an expected message to see if your data is validated. MAKE SURE TO MATCH THE WHITESPACE (so terminate with \r\n).
+void benchmarkMessagesPerSecond(std::string expectedMessage ="-", float measureXseconds = 10.0f )
+{
+    clock_t start, time = 0;
+    start = clock();
+    
+    int validMessagesCounter = 0;
+    int invalidMessagesCounter = 0;
+
+    std::cout << "Benchmark started, wait " << measureXseconds << " seconds" << std::endl;
+
+    if (expectedMessage != "-")
+    {
+        while (time < measureXseconds)
+        {
+            std::string msg = recieveStringMessageFromEsp32("\n", false);
+
+            if (msg == "")
+            {
+                // do nothing, no message was received in the time period
+            }
+            else if (msg == expectedMessage)
+            {
+                validMessagesCounter++;
+            }
+            else
+            {
+                invalidMessagesCounter++;
+            }
+            time = (clock() - start) / CLOCKS_PER_SEC;
+        }
+    }
+    else
+    {
+        while (time < measureXseconds)
+        {
+            std::string msg = recieveStringMessageFromEsp32("\n", false);
+            if (msg == "")
+            {
+                // do nothing, no message was received in the time period
+            }
+            else
+            {
+                validMessagesCounter++;
+            }
+            time = (clock() - start) / CLOCKS_PER_SEC;
+        }
+    }
+    std::cout << "Benchmark completed" << std::endl;
+    std::cout << "Measured for " << time << " seconds" << std::endl;
+    std::cout << "Received " << validMessagesCounter << " valid messages and " << invalidMessagesCounter << " invalid messages" << std::endl;
+    std::cout << "Total: " << validMessagesCounter / time << " messages per second." << std::endl;
+}
 
 
 
@@ -196,10 +236,11 @@ int main()
         return 0;
     }
     std::cout <<"Waiting to recieve a message\r\n";
-    while (true)
-    {
-        recieveStringMessageFromEsp32(); //receive messages from ESP32
-    }
+    //while (true)
+    //{
+    //    recieveStringMessageFromEsp32(); //receive messages from ESP32
+    //}
+    benchmarkMessagesPerSecond("<970,400,500-500,500,100-1,0>\r\n", 10);
 
     return 0;
 }
